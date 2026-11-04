@@ -1,6 +1,9 @@
 #include <MPS.h>
 #include "config.h"
 
+
+#define BUTTON_PIN 3 // GPIO3 (G3) connecté au bouton
+
 // ---- Structures de payload ----
 // placer ici vos structures de payloads, par exemple :
 // struct __attribute__((packed)) SomePayload { // __attribute__((packed)) permet de contrôler la disposition des octets de celle-ci
@@ -18,12 +21,16 @@ static_assert(sizeof(CounterPayload) == 4, "CounterPayload = 4 octets");
 // ---- Variables globales ----
 static CounterPayload counter = {0};
 
+// enum ButtonState { PRESSED , RELEASED};
+// enum ButtonState current_state = RELEASED;
+
 // ---- Subjects ----
 constexpr mps::Subject kSubHb = mps::makeSubject("hb_" DEVICE_NAME);
 
 constexpr mps::Subject kSubStatusCounter = mps::makeSubject("status_" DEVICE_NAME "_counter");
 // constexpr mps::Subject kSubCmdResetCounter = mps::makeSubject("cmd_" DEVICE_NAME "_reset_counter");
 constexpr mps::Subject kSubCmdReset = mps::makeSubject("cmd_" DEVICE_NAME "_reset");
+constexpr mps::Subject kSubCmdButton = mps::makeSubject("cmd_" DEVICE_NAME "_button_state");
 
 // ---- Callbacks ----
 // Appelé lors de l'ouverture de la session (callback)
@@ -46,12 +53,25 @@ static void onCmdReset(const mps::FrameView& message, void*) {
   MPS.publishValue(kSubStatusCounter, counter); // l'IHM voit le résultat réel
 }
 
+static void onButtonChange(const mps::FrameView& message, void*)
+{
 
-// static void onCmdSomeOrder(const mps::FrameView& message, void*) {
-//   SomePayload payload;
-//   if(!mps::readPayloadAs(message, &payload)) return;
-//   Serial.printf("Donnée : %02X\n", payload.someVariableA);
-// }
+  if (message.payloadLength != 0) return;
+
+  int buttonState = digitalRead(BUTTON_PIN);
+
+  if (buttonState == LOW)
+  {
+    Serial.println("Bouton appuye !");
+    MPS.publishValue(kSubCmdButton, 0);
+  }
+  else
+  {
+    Serial.println("Bouton relache.");
+    MPS.publishValue(kSubCmdButton, 1);
+  }
+}
+
 
 // ---- Fonctions appelées par setup/loop ----
 // envoi de heartbeats réguliers sans bloquer (comparaison au temps écoulé sans delay())
@@ -70,7 +90,11 @@ void publishHeartbeat(){
 // Exécutée une fois au démarrage
 void setup() {
   Serial.begin(115200); // Démarrage de la communication série à 115200 bauds (sortie des Serial.print.. par exemple)
+
+
   MPS.setLogOutput(&Serial); // Définition de la sortie des messages de log de la lib MPS
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP); //Le bouton reliera G3 à GND lorsqu'il est pressé (LOW) et sera HIGH au repos.
 
   // enregistrement des callbacks
   MPS.setRegisteredCallback(onSessionOpened);
@@ -79,6 +103,7 @@ void setup() {
   // par exemple :
   // MPS.on(kSubCmdSomeOrder, onCmdSomeOrder);
   MPS.on(kSubCmdReset, onCmdReset);
+  MPS.on(kSubCmdButton, onButtonChange);
 
   // constante d'adresse vide pour vérifier que l'adresse a été définie dans config.h
   static const uint8_t kUnsetMacAddress[6] = {0, 0, 0, 0, 0, 0};
