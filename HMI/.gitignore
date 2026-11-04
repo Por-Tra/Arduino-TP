@@ -1,0 +1,18 @@
+# Cache et fichiers generes par Godot 4.
+.godot/
+
+# Executables et bibliotheques exportes par ce projet.
+/build/
+
+# Identifiants prives utilises pour les exports.
+export_credentials.cfg
+
+# Traductions binaires generees depuis les fichiers CSV.
+*.translation
+
+# Fichiers crees par le systeme d'exploitation.
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Conserver les fichiers .uid, .import et export_presets.cfg dans Git.
