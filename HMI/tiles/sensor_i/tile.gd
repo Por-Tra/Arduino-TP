@@ -10,6 +10,8 @@ const HB_BLINK_S := 0.5
 
 const SUB_STATUS_COUNTER = "status_" + DEVICE_NAME + "_counter"
 const SUB_CMD_RESET = "cmd_" + DEVICE_NAME + "_reset"
+const SUB_STATUT_BUTTON = "status_" + DEVICE_NAME + "_button"
+const SUB_STATUT_SENSOR = "status_" + DEVICE_NAME + "_sensor"
 
 # ---- VARIABLES ----
 var _node_id: int = -1
@@ -24,11 +26,14 @@ var _connected: bool = false:
 		else:
 			_on_sensor_disconnected()
 
+var _state_button_style: StyleBoxFlat
+
 
 func get_subscriptions() -> PackedStringArray:
 	var subscriptions: PackedStringArray = []
 	subscriptions.append(SUB_HB)
-	subscriptions.append(SUB_STATUS_COUNTER) # sans cette ligne, on_message ne reçoit rien
+	subscriptions.append(SUB_STATUS_COUNTER)
+	subscriptions.append(SUB_STATUT_BUTTON)
 	return subscriptions
 
 
@@ -38,6 +43,7 @@ func on_node_online(node_id: int, _mac_address: String, device_name: String) -> 
 	if device_name != DEVICE_NAME: return
 	_node_id = node_id  # nouvel identifiant possible après un redémarrage du capteur
 	%IDLabel.text = "node_id: %d" % _node_id
+	
 
 
 func on_node_offline(node_id: int, _reason_code: int) -> void:
@@ -55,9 +61,32 @@ func on_message(subject_name: String, source_id: int, payload: PackedByteArray) 
 	if source_id != _node_id: return # ne traitez que les messages dédiés à votre capteur
 	if subject_name == SUB_STATUS_COUNTER:
 		if payload.size() != 4: return # le contrat : 4 octets, sinon on ignore
-		%CounterLabel.text = "%d" % payload.decode_u32(0)
-	
+		%CounterLabel.text = str(payload.decode_u32(0))
+		
+		
+	if subject_name == SUB_STATUT_BUTTON:
+		if payload.size() != 1: return
+		_set_button_state(bool(payload.decode_u8(0)))	
 
+
+
+	if subject_name == SUB_STATUT_SENSOR:
+		if payload.size() != 8:
+			return
+		print("HAAAAAAAAAAA")
+
+		var temperature := payload.decode_float(0)
+		var humidity := payload.decode_float(4)
+
+		%StateSensor.text = "%.1f °C | %.1f %%" % [temperature, humidity]
+
+
+func _set_button_state(is_pressed: bool) -> void:
+	%DescStateButton.text = "PRESS" if is_pressed else "RELEASE"
+
+	var color := Color(0x00d67bff) if is_pressed else Color(0x0090d5ff)
+	color.a = _state_button_style.bg_color.a
+	_state_button_style.bg_color = color
 
 func _process(delta: float) -> void:
 	_seconds_since_hb += delta
@@ -86,9 +115,15 @@ func _on_hb(source_id: int):
 	
 
 func _ready() -> void:
-	super() # obligatoire : c'est lui qui abonne la tuile
-	%ResetButton.pressed.connect(func(): publish(SUB_CMD_RESET, PackedByteArray(), true))
-
-
-
+	super()
+	
+	# Applique un style propre à cet indicateur.
+	_state_button_style = %StateButton.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	%StateButton.add_theme_stylebox_override("panel", _state_button_style)
+	_set_button_state(false)
+	
+	
+	%ResetButton.pressed.connect(
+		func(): publish(SUB_CMD_RESET, PackedByteArray(), true)
+	)
 	

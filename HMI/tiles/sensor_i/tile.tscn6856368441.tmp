@@ -1,0 +1,230 @@
+[gd_scene format=3 uid="uid://ckcayqapl33gc"]
+
+[ext_resource type="StyleBox" uid="uid://t0n8yj0takmp" path="res://style/sbf_tile.tres" id="1_2u52h"]
+[ext_resource type="Script" uid="uid://11qhni3m6yak" path="res://tiles/sensor_i/tile.gd" id="2_llf5u"]
+[ext_resource type="FontFile" uid="uid://dikfnegsi5prc" path="res://tiles/sensor_i/SpaceMono-Bold.ttf" id="3_qvuxg"]
+[ext_resource type="Texture2D" uid="uid://dkwoc7t8fmid6" path="res://tiles/sensor_i/wifi.png" id="4_i5g6b"]
+[ext_resource type="Script" uid="uid://cckwr06504sfp" path="res://core/state_icon.gd" id="5_bfsxy"]
+[ext_resource type="Texture2D" uid="uid://cs2j87jffdyfw" path="res://tiles/sensor_i/heart(2).png" id="6_4ql6q"]
+[ext_resource type="FontFile" uid="uid://cpkd33u6o7d7n" path="res://tiles/sensor_i/SpaceMono-Regular.ttf" id="7_5n3q8"]
+[ext_resource type="StyleBox" uid="uid://dk5pk1jbh82h2" path="res://style/button_red.tres" id="8_sg6br"]
+[ext_resource type="Script" uid="uid://csgbx3264kcel" path="res://core/tile.gd" id="9_7hni5"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lbf3d"]
+content_margin_bottom = 1.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_g4v7s"]
+font = ExtResource("3_qvuxg")
+
+[sub_resource type="Theme" id="Theme_g4v7s"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7hni5"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="Theme" id="Theme_7hni5"]
+
+[node name="TileSensorDemo" type="Panel" unique_id=304170558]
+custom_minimum_size = Vector2(336, 336)
+custom_maximum_size = Vector2(336, 336)
+offset_right = 360.0
+offset_bottom = 240.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("1_2u52h")
+script = ExtResource("2_llf5u")
+metadata/_custom_type_script = "uid://csgbx3264kcel"
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=886785613]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Container" type="VBoxContainer" parent="MarginContainer" unique_id=1739455699]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="HBoxContainer" parent="MarginContainer/Container" unique_id=862181495]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="MarginContainer/Container/Title" unique_id=1467322133]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "SENSOR BOILER"
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="ConnectedIcon" type="TextureRect" parent="MarginContainer/Container/Title" unique_id=31549510]
+unique_name_in_owner = true
+modulate = Color(0.23921569, 0.6, 0.28627452, 1)
+custom_maximum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_i5g6b")
+script = ExtResource("5_bfsxy")
+state = false
+_color_on = Color(0.23921569, 0.6, 0.28627452, 1)
+_color_off = Color(0.14, 0.14, 0.14, 1)
+metadata/_custom_type_script = "uid://cckwr06504sfp"
+
+[node name="HeartbeatIcon" type="TextureRect" parent="MarginContainer/Container/Title" unique_id=224637191]
+unique_name_in_owner = true
+custom_maximum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_4ql6q")
+script = ExtResource("5_bfsxy")
+state = false
+_color_on = Color(0.6, 0.23921569, 0.23921569, 1)
+_color_off = Color(0.14, 0.14, 0.14, 1)
+metadata/_custom_type_script = "uid://cckwr06504sfp"
+
+[node name="IDLabel" type="Label" parent="MarginContainer/Container" unique_id=614588024]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("7_5n3q8")
+theme_override_font_sizes/font_size = 20
+text = "node_id: ∅"
+
+[node name="ContentCounter" type="HBoxContainer" parent="MarginContainer/Container" unique_id=1114318310]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Counter" type="HBoxContainer" parent="MarginContainer/Container/ContentCounter" unique_id=1664204712]
+layout_mode = 2
+size_flags_horizontal = 2
+
+[node name="TitleCounter" type="Label" parent="MarginContainer/Container/ContentCounter/Counter" unique_id=1023497987]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "Counter :"
+label_settings = SubResource("LabelSettings_g4v7s")
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="CounterLabel" type="Label" parent="MarginContainer/Container/ContentCounter/Counter" unique_id=1747851082]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "X"
+label_settings = SubResource("LabelSettings_g4v7s")
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="ResetButton" type="Button" parent="MarginContainer/Container/ContentCounter" unique_id=1862679839]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(112.845, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+offset_transform_enabled = true
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = ExtResource("8_sg6br")
+text = "RESET"
+
+[node name="ContentStateButton" type="HBoxContainer" parent="MarginContainer/Container" unique_id=974458806]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="TitleStateButton" type="Label" parent="MarginContainer/Container/ContentStateButton" unique_id=1496900867]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "State button :"
+label_settings = SubResource("LabelSettings_g4v7s")
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="StateButton" type="Panel" parent="MarginContainer/Container/ContentStateButton" unique_id=1788600179]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(88.79, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+offset_transform_enabled = true
+theme = SubResource("Theme_g4v7s")
+theme_override_styles/panel = SubResource("StyleBoxFlat_7hni5")
+script = ExtResource("9_7hni5")
+metadata/_custom_type_script = "uid://csgbx3264kcel"
+
+[node name="DescStateButton" type="Label" parent="MarginContainer/Container/ContentStateButton/StateButton" unique_id=24551099]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 1
+theme = SubResource("Theme_7hni5")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "xxxxx"
+label_settings = SubResource("LabelSettings_g4v7s")
+horizontal_alignment = 1
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="ContentSensor" type="HBoxContainer" parent="MarginContainer/Container" unique_id=2034367318]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="TitleSensor" type="Label" parent="MarginContainer/Container/ContentSensor" unique_id=889260595]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "Sensor :"
+label_settings = SubResource("LabelSettings_g4v7s")
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="StateSensor" type="Label" parent="MarginContainer/Container/ContentSensor" unique_id=119766455]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme = SubResource("Theme_7hni5")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "xxxxx"
+label_settings = SubResource("LabelSettings_g4v7s")
+horizontal_alignment = 1
+vertical_alignment = 1
+visible_characters_behavior = 1

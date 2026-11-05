@@ -10,7 +10,7 @@ content_margin_top = 8.0
 content_margin_right = 8.0
 content_margin_bottom = 8.0
 
-[node name="Hmi" type="Control" unique_id=493490949]
+[node name="IHM" type="Control" unique_id=493490949]
 custom_maximum_size = Vector2(720, 720)
 layout_mode = 3
 anchors_preset = 15
