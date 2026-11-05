@@ -1,8 +1,15 @@
+#include <DHT.h>
+#include <DHT_U.h>
+
 #include <MPS.h>
 #include "config.h"
 
 
 #define BUTTON_PIN 3 // GPIO3 (G3) connecté au bouton
+#define DHT_PIN 0
+#define DHT_TYPE DHT11
+
+DHT dht(DHT_PIN, DHT_TYPE);
 
 // ---- Structures de payload ----
 // placer ici vos structures de payloads, par exemple :
@@ -18,11 +25,22 @@ struct __attribute__((packed)) CounterPayload {
 };
 static_assert(sizeof(CounterPayload) == 4, "CounterPayload = 4 octets");
 
+struct __attribute__((packed)) ButtonPayload {
+  uint8_t value; // 1 octet
+};
+static_assert(sizeof(ButtonPayload) == 1, "ButtonPayload = 1 octets"); 
+
+struct __attribute__((packed)) DHTPayload {
+  float temperature;
+  float humidity;
+};
+static_assert(sizeof(DHTPayload) == 8, "DHTPayload = 1 octets"); 
+
+
 // ---- Variables globales ----
 static CounterPayload counter = {0};
-
-// enum ButtonState { PRESSED , RELEASED};
-// enum ButtonState current_state = RELEASED;
+static ButtonPayload status_button = {false};
+static DHTPayload status_sensor = {0};
 
 // ---- Subjects ----
 constexpr mps::Subject kSubHb = mps::makeSubject("hb_" DEVICE_NAME);
@@ -30,7 +48,9 @@ constexpr mps::Subject kSubHb = mps::makeSubject("hb_" DEVICE_NAME);
 constexpr mps::Subject kSubStatusCounter = mps::makeSubject("status_" DEVICE_NAME "_counter");
 // constexpr mps::Subject kSubCmdResetCounter = mps::makeSubject("cmd_" DEVICE_NAME "_reset_counter");
 constexpr mps::Subject kSubCmdReset = mps::makeSubject("cmd_" DEVICE_NAME "_reset");
-constexpr mps::Subject kSubCmdButton = mps::makeSubject("cmd_" DEVICE_NAME "_button_state");
+constexpr mps::Subject kSubStatusButton = mps::makeSubject("status_" DEVICE_NAME "_button");
+constexpr mps::Subject kSubStatusSensor = mps::makeSubject("status_" DEVICE_NAME "_sensor");
+
 
 // ---- Callbacks ----
 // Appelé lors de l'ouverture de la session (callback)
@@ -53,25 +73,6 @@ static void onCmdReset(const mps::FrameView& message, void*) {
   MPS.publishValue(kSubStatusCounter, counter); // l'IHM voit le résultat réel
 }
 
-static void onButtonChange(const mps::FrameView& message, void*)
-{
-
-  if (message.payloadLength != 0) return;
-
-  int buttonState = digitalRead(BUTTON_PIN);
-
-  if (buttonState == LOW)
-  {
-    Serial.println("Bouton appuye !");
-    MPS.publishValue(kSubCmdButton, 0);
-  }
-  else
-  {
-    Serial.println("Bouton relache.");
-    MPS.publishValue(kSubCmdButton, 1);
-  }
-}
-
 
 // ---- Fonctions appelées par setup/loop ----
 // envoi de heartbeats réguliers sans bloquer (comparaison au temps écoulé sans delay())
@@ -91,6 +92,7 @@ void publishHeartbeat(){
 void setup() {
   Serial.begin(115200); // Démarrage de la communication série à 115200 bauds (sortie des Serial.print.. par exemple)
 
+  dht.begin();
 
   MPS.setLogOutput(&Serial); // Définition de la sortie des messages de log de la lib MPS
 
@@ -103,7 +105,6 @@ void setup() {
   // par exemple :
   // MPS.on(kSubCmdSomeOrder, onCmdSomeOrder);
   MPS.on(kSubCmdReset, onCmdReset);
-  MPS.on(kSubCmdButton, onButtonChange);
 
   // constante d'adresse vide pour vérifier que l'adresse a été définie dans config.h
   static const uint8_t kUnsetMacAddress[6] = {0, 0, 0, 0, 0, 0};
@@ -133,8 +134,23 @@ void loop() {
     counter.value++;
     MPS.publishValue(kSubStatusCounter, counter);
 
-    //Serial.println((String)"counter:"+counter);
+    status_sensor.temperature = dht.readTemperature();
+    status_sensor.humidity = dht.readHumidity();
+    Serial.println(status_sensor.temperature);
+    Serial.println(status_sensor.humidity);
+
+
+    MPS.publishValue(kSubStatusSensor, status_sensor);
   }
+  
+
+  // Envoyer seulement quand l'état du bouton change, spam moins la cible
+  if(status_button.value != (digitalRead(BUTTON_PIN) == LOW)) // verifie l'etat du bouton
+  {
+    status_button.value = digitalRead(BUTTON_PIN) == LOW; // Recupérer l'etat du bouton
+    MPS.publishValue(kSubStatusButton, status_button);
+  }
+
 
   
   // ... ajoutez vos envois de données et autres comportements **non bloquants**
