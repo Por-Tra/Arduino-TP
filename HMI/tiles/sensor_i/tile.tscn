@@ -228,3 +228,48 @@ label_settings = SubResource("LabelSettings_g4v7s")
 horizontal_alignment = 1
 vertical_alignment = 1
 visible_characters_behavior = 1
+
+[node name="ContentLED" type="HBoxContainer" parent="MarginContainer/Container" unique_id=1846748511]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLED" type="Label" parent="MarginContainer/Container/ContentLED" unique_id=824026213]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_qvuxg")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "LED :"
+label_settings = SubResource("LabelSettings_g4v7s")
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="HexaColorLED" type="Label" parent="MarginContainer/Container/ContentLED" unique_id=2047917345]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme = SubResource("Theme_7hni5")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "xxxxx"
+label_settings = SubResource("LabelSettings_g4v7s")
+horizontal_alignment = 1
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="ColorPickerLED" type="ColorPickerButton" parent="MarginContainer/Container/ContentLED" unique_id=2023060072]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+
+[node name="TurnOffButtonLED" type="Button" parent="MarginContainer/Container/ContentLED" unique_id=1427055339]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(99.145, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+offset_transform_enabled = true
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = ExtResource("8_sg6br")
+text = "TURN OFF"
