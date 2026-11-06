@@ -19,6 +19,7 @@ Entiers en little-endian ; flottants IEEE 754 sur 4 octets. Les offsets et taill
 | Subject | Sens | Champs (offset : type, unité/sens) | Taille |
 | --- | --- | --- | --- |
 | `hb_sensor_i` | Capteur → IHM | 0 : `state` uint8_t (0 OK, 1 dégradé, 2 défaut) ; 1 : `counter` uint16_t ; 3 : `uptime_ms` uint32_t (ms) | 7 |
+| `get_sensor_i_state` | IHM → capteur | Vide ; demande tous les états courants, sans ACK | 0 |
 | `status_sensor_i_counter` | Capteur → IHM | 0 : `value` uint32_t, nombre d'incréments | 4 |
 | `cmd_sensor_i_reset` | IHM → capteur | Vide ; remet le compteur à zéro | 0 |
 | `status_sensor_i_button` | Capteur → IHM | 0 : `value` uint8_t, 0 relâché / 1 appuyé | 1 |
@@ -30,5 +31,5 @@ Entiers en little-endian ; flottants IEEE 754 sur 4 octets. Les offsets et taill
 
 Les `cmd_` et `set_` demandent un ACK ; le capteur confirme par un `status_`.
 Le noir éteint la LED ; la commande d'état conserve la couleur mémorisée.
-L'état est republié à chaque ouverture de session. Les tailles incorrectes sont ignorées.
+L'état est republié à chaque ouverture de session et sur demande de l'IHM à sa reconnexion. Les tailles incorrectes sont ignorées.
 Sans heartbeat pendant 3,5 s, les valeurs sont grisées et les commandes désactivées.

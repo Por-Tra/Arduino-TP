@@ -5,6 +5,7 @@
 #include "config.h"
 
 
+// ---- Broches et délais ----
 #define BUTTON_PIN 3 // GPIO3 (G3) connecté au bouton
 #define DHT_PIN 0
 #define DHT_TYPE DHT11
@@ -15,22 +16,26 @@
 static DHT dht(DHT_PIN, DHT_TYPE);
 
 // ---- Structures de payload ----
+// Valeur du compteur envoyée à l’IHM.
 struct __attribute__((packed)) CounterPayload {
   uint32_t value;
 };
 static_assert(sizeof(CounterPayload) == 4, "CounterPayload = 4 octets");
 
+// État du bouton physique : relâché ou appuyé.
 struct __attribute__((packed)) ButtonPayload {
-  uint8_t value; // 1 octet
+  uint8_t value; // 0 : relâché, 1 : appuyé
 };
 static_assert(sizeof(ButtonPayload) == 1, "ButtonPayload = 1 octets"); 
 
+// Température et humidité mesurées par le DHT11.
 struct __attribute__((packed)) DHTPayload {
-  float temperatureDegrees;
-  float humidityPercent;
+  float temperatureDegrees; // Température en degrés Celsius
+  float humidityPercent; // Humidité relative en pourcentage
 };
 static_assert(sizeof(DHTPayload) == 8, "DHTPayload = 8 octets");
 
+// Couleur de la LED, avec une intensité de 0 à 255 par composante.
 struct __attribute__((packed)) LedColorPayload {
   uint8_t red = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
   uint8_t green = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
@@ -38,6 +43,7 @@ struct __attribute__((packed)) LedColorPayload {
 };
 static_assert(sizeof(LedColorPayload) == 3, "LedColorPayload = 3 octet");
 
+// État de la LED : 0 pour éteinte, 1 pour allumée.
 struct __attribute__((packed)) LedStatePayload {
   uint8_t state = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
 };
@@ -53,6 +59,7 @@ static LedStatePayload ledState = {0};
 
 // ---- Subjects ----
 constexpr mps::Subject kSubHb = mps::makeSubject("hb_" DEVICE_NAME);
+constexpr mps::Subject kSubGetState = mps::makeSubject("get_" DEVICE_NAME "_state");
 
 constexpr mps::Subject kSubStatusCounter = mps::makeSubject("status_" DEVICE_NAME "_counter");
 constexpr mps::Subject kSubCmdReset = mps::makeSubject("cmd_" DEVICE_NAME "_reset");
@@ -87,6 +94,18 @@ static void onSendFailed(uint16_t sequenceNumber, uint32_t subjectId, mps::SendF
   Serial.printf("/!\\ envoi %u (subject 0x%08lX) perdu\n", sequenceNumber, (unsigned long)subjectId);
 }
 
+// Renvoie les états courants à l’IHM lorsqu’elle se reconnecte.
+static void onGetState(const mps::FrameView& message, void*) {
+  if (message.payloadLength != 0) return;
+
+  MPS.publishValue(kSubStatusCounter, counter);
+  MPS.publishValue(kSubStatusSensor, sensorStatus);
+  MPS.publishValue(kSubStatusButton, buttonStatus);
+  MPS.publishValue(kSubStatusLedColor, ledColor);
+  MPS.publishValue(kSubStatusLedState, ledState);
+}
+
+// Remet le compteur à zéro et confirme sa nouvelle valeur.
 static void onCmdReset(const mps::FrameView& message, void*) {
   if (message.payloadLength != 0) return; // ce format n'a pas de payload
 
@@ -94,6 +113,7 @@ static void onCmdReset(const mps::FrameView& message, void*) {
   MPS.publishValue(kSubStatusCounter, counter); // l'IHM voit le résultat réel
 }
 
+// Applique la couleur demandée et confirme la couleur et l’état de la LED.
 static void onSetLedColor(const mps::FrameView& message, void*)
 {
   if(!mps::readPayloadAs(message, &ledColor)) return; // Copie dans ledColor le message s'il est conforme
@@ -114,6 +134,7 @@ static void onSetLedColor(const mps::FrameView& message, void*)
   MPS.publishValue(kSubStatusLedState, ledState); // Publier le changement
 }
 
+// Allume ou éteint la LED en conservant la couleur mémorisée.
 static void onCmdLedState(const mps::FrameView& message, void*) {
   if (!mps::readPayloadAs(message, &ledState)) return;
 
@@ -145,7 +166,7 @@ static void publishHeartbeat(){
 }
 
 // ---- Fonctions Arduino ----
-// Exécutée une fois au démarrage
+// Initialise le matériel et la communication avec la passerelle.
 void setup() {
   Serial.begin(SERIAL_BAUD_RATE); // Démarrage de la communication série à 115200 bauds (sortie des Serial.print.. par exemple)
 
@@ -160,6 +181,7 @@ void setup() {
   MPS.setRegisteredCallback(onSessionOpened);
   MPS.setSendFailedCallback(onSendFailed);
 
+  MPS.on(kSubGetState, onGetState);
   MPS.on(kSubCmdReset, onCmdReset);
   MPS.on(kSubSetLedColor, onSetLedColor);
   MPS.on(kSubCmdLedState, onCmdLedState);
@@ -180,7 +202,7 @@ void setup() {
   rgbLedWrite(LED_PIN, 0, 0, 0);
 }
 
-// Exécutée en boucle (= while(true))
+// Traite les messages et publie les valeurs du capteur en continu.
 void loop() {
   // appel de la boucle MPS (/!\ du code bloquant dans votre boucle loop() pourrait occasionner des problèmes de connexion)
   MPS.loop();
@@ -203,7 +225,7 @@ void loop() {
   }
   
 
-  // Envoyer seulement quand l'état du bouton change, spam moins la cible
+  // Publie le bouton uniquement lorsque son état change.
   if(buttonStatus.value != (digitalRead(BUTTON_PIN) == LOW)) // verifie l'etat du bouton
   {
     buttonStatus.value = digitalRead(BUTTON_PIN) == LOW; // Recupérer l'etat du bouton

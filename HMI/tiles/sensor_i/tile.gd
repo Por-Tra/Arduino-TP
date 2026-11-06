@@ -3,6 +3,7 @@ extends Tile
 # ---- CONSTANTES ----
 const DEVICE_NAME = "sensor_i"
 const SUB_HB = "hb_" + DEVICE_NAME
+const SUB_GET_STATE = "get_" + DEVICE_NAME + "_state"
 ## Délai sans heartbeat au-delà duquel le capteur est considéré comme bloqué (3,5 périodes de 1 s).
 const HB_TIMEOUT_S := 3.5
 ## Durée d'allumage de l'icône de heartbeat à chaque réception.
@@ -58,6 +59,8 @@ var _color_led:Color
 var _led_button_style: StyleBoxFlat
 
 
+# ---- Abonnements et réception des messages ----
+# Indique les messages que la tuile souhaite recevoir.
 func get_subscriptions() -> PackedStringArray:
 	var subscriptions: PackedStringArray = []
 	subscriptions.append(SUB_HB)
@@ -79,16 +82,19 @@ func on_node_online(node_id: int, _mac_address: String, device_name: String) -> 
 	
 
 
+# Signale la déconnexion du capteur dans la tuile.
 func on_node_offline(node_id: int, _reason_code: int) -> void:
 	if node_id == _node_id: _connected = false
 
 
+# Désactive la tuile lorsque la liaison avec la passerelle est perdue.
 func on_gateway_reachability_changed(is_gateway_reachable: bool) -> void:
 	if is_gateway_reachable: return
 	_connected = false
 	_node_id = UNKNOWN_NODE_ID  # la passerelle peut redistribuer les identifiants en redémarrant
 
 
+# Vérifie les messages reçus et affiche les états confirmés par le capteur.
 func on_message(subject_name: String, source_id: int, payload: PackedByteArray) -> void:
 	if subject_name == SUB_HB:
 		if _node_id != UNKNOWN_NODE_ID and source_id != _node_id: return
@@ -136,6 +142,7 @@ func on_message(subject_name: String, source_id: int, payload: PackedByteArray) 
 		_state_led = payload.decode_u8(LED_STATE_OFFSET) != 0
 		_update_led_button()
 		
+# Affiche si le bouton physique est appuyé ou relâché.
 func _set_button_state(is_pressed: bool) -> void:
 	%DescStateButton.text = "PRESS" if is_pressed else "RELEASE"
 
@@ -146,6 +153,7 @@ func _set_button_state(is_pressed: bool) -> void:
 
 # -- LED --
 
+# Envoie la couleur choisie et attend la confirmation pour l’afficher.
 func _send_led_color() -> void:
 	var color: Color = %ColorPickerLED.color
 	%ColorPickerLED.color = _color_led
@@ -160,6 +168,7 @@ func _send_led_color() -> void:
 
 	publish(SUB_SET_LED_COLOR, payload, true)
 	
+# Demande l’allumage ou l’extinction sans modifier directement l’affichage.
 func _send_led_state() -> void:
 	var requested_state := not _state_led
 	var payload := PackedByteArray([int(requested_state)])
@@ -167,6 +176,7 @@ func _send_led_state() -> void:
 	publish(SUB_CMD_LED_STATE, payload, true)
 	
 
+# Affiche l’état de la LED confirmé par le capteur.
 func _update_led_button() -> void:
 	%TurnOffButtonLED.text = "TURN OFF" if _state_led else "TURN ON"
 
@@ -174,13 +184,17 @@ func _update_led_button() -> void:
 	color.a = _led_button_style.bg_color.a
 	_led_button_style.bg_color = color
 
+# Met à jour le sélecteur avec la couleur reçue du capteur.
 func _update_led_color(color: Color) -> void:
 	%ColorPickerLED.color = color
 
+# Affiche la couleur reçue au format hexadécimal.
 func _update_led_hex(color: Color) -> void:
 	%HexaColorLED.text = "#" + color.to_html(false).to_upper()
 
 	
+# ---- Suivi de la connexion ----
+# Anime le heartbeat et vérifie que le capteur répond toujours.
 func _process(delta: float) -> void:
 	_seconds_since_hb += delta
 	%HeartbeatIcon.state = _seconds_since_hb < HB_BLINK_S
@@ -188,12 +202,15 @@ func _process(delta: float) -> void:
 		_connected = false  # plus de heartbeat : code du capteur bloqué ou capteur hors de portée
 
 
+# Active la tuile et demande les états courants au capteur.
 func _on_sensor_connected():
 	%IDLabel.text = "node_id: %d" % _node_id
 	%ConnectedIcon.state = true
 	_update_availability()
+	publish(SUB_GET_STATE, PackedByteArray())
 
 
+# Grise les anciennes valeurs et désactive les commandes.
 func _on_sensor_disconnected():
 	%IDLabel.text = "node_id: ∅"
 	%ConnectedIcon.state = false
@@ -209,6 +226,7 @@ func _on_hb(source_id: int):
 	_connected = true
 	
 
+# Active ou désactive les commandes selon la connexion du capteur.
 func _update_availability() -> void:
 	for control in [%ResetButton, %TurnOffButtonLED, %ColorPickerLED]:
 		control.disabled = not _connected
@@ -218,6 +236,8 @@ func _update_availability() -> void:
 		%ColorPickerLED.get_popup().hide()
 
 
+# ---- Initialisation de la tuile ----
+# Prépare les styles et relie les boutons à leurs commandes.
 func _ready() -> void:
 	super()
 	
@@ -243,7 +263,6 @@ func _ready() -> void:
 	
 
 	_update_led_button()
-	
 	
 
 
