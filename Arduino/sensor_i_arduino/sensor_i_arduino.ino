@@ -9,8 +9,10 @@
 #define DHT_PIN 0
 #define DHT_TYPE DHT11
 #define LED_PIN 2
+#define SERIAL_BAUD_RATE 115200
+#define COUNTER_PERIOD_MS 2000
 
-DHT dht(DHT_PIN, DHT_TYPE);
+static DHT dht(DHT_PIN, DHT_TYPE);
 
 // ---- Structures de payload ----
 struct __attribute__((packed)) CounterPayload {
@@ -24,30 +26,30 @@ struct __attribute__((packed)) ButtonPayload {
 static_assert(sizeof(ButtonPayload) == 1, "ButtonPayload = 1 octets"); 
 
 struct __attribute__((packed)) DHTPayload {
-  float temperature;
-  float humidity;
+  float temperatureDegrees;
+  float humidityPercent;
 };
-static_assert(sizeof(DHTPayload) == 8, "DHTPayload = 8 octets"); 
+static_assert(sizeof(DHTPayload) == 8, "DHTPayload = 8 octets");
 
-struct __attribute__((packed)) LedPayloadColor {
-  uint8_t R = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
-  uint8_t G = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
-  uint8_t B = 0;  // Valeur par défaut puisque la led est eteinte dans la setup 
+struct __attribute__((packed)) LedColorPayload {
+  uint8_t red = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
+  uint8_t green = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
+  uint8_t blue = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
 };
-static_assert(sizeof(LedPayloadColor) == 3, "LedPayloadColor = 3 octet");
+static_assert(sizeof(LedColorPayload) == 3, "LedColorPayload = 3 octet");
 
-struct __attribute__((packed)) LedPayloadState {
+struct __attribute__((packed)) LedStatePayload {
   uint8_t state = 0;  // Valeur par défaut puisque la led est eteinte dans la setup
 };
-static_assert(sizeof(LedPayloadState) == 1, "LedPayloadState = 1 octet");
+static_assert(sizeof(LedStatePayload) == 1, "LedStatePayload = 1 octet");
 
 
 // ---- Variables globales ----
 static CounterPayload counter = {0};
-static ButtonPayload status_button = {false};
-static DHTPayload status_sensor = {0};
-static LedPayloadColor led_payload_color = {0};
-static LedPayloadState led_payload_state = {0};
+static ButtonPayload buttonStatus = {false};
+static DHTPayload sensorStatus = {0};
+static LedColorPayload ledColor = {0};
+static LedStatePayload ledState = {0};
 
 // ---- Subjects ----
 constexpr mps::Subject kSubHb = mps::makeSubject("hb_" DEVICE_NAME);
@@ -62,7 +64,7 @@ constexpr mps::Subject kSubStatusButton = mps::makeSubject("status_" DEVICE_NAME
 constexpr mps::Subject kSubStatusSensor = mps::makeSubject("status_" DEVICE_NAME "_sensor");
 
 // LED
-constexpr mps::Subject kSubCmdLedColor = mps::makeSubject("cmd_" DEVICE_NAME "_led_color");
+constexpr mps::Subject kSubSetLedColor = mps::makeSubject("set_" DEVICE_NAME "_led_color");
 constexpr mps::Subject kSubStatusLedColor = mps::makeSubject("status_" DEVICE_NAME "_led_color");
 
 constexpr mps::Subject kSubCmdLedState = mps::makeSubject("cmd_" DEVICE_NAME "_led_state");
@@ -74,10 +76,10 @@ constexpr mps::Subject kSubStatusLedState = mps::makeSubject("status_" DEVICE_NA
 static void onSessionOpened() {
   Serial.println("Session opened!");
   MPS.publishValue(kSubStatusCounter, counter);
-  MPS.publishValue(kSubStatusSensor, status_sensor);
-  MPS.publishValue(kSubStatusButton, status_button);
-  MPS.publishValue(kSubStatusLedColor, led_payload_color);
-  MPS.publishValue(kSubStatusLedState, led_payload_state);
+  MPS.publishValue(kSubStatusSensor, sensorStatus);
+  MPS.publishValue(kSubStatusButton, buttonStatus);
+  MPS.publishValue(kSubStatusLedColor, ledColor);
+  MPS.publishValue(kSubStatusLedState, ledState);
 }
 
 // Appelé en cas d'échec d'envoi (callback)
@@ -92,48 +94,48 @@ static void onCmdReset(const mps::FrameView& message, void*) {
   MPS.publishValue(kSubStatusCounter, counter); // l'IHM voit le résultat réel
 }
 
-static void onCmdLedColor(const mps::FrameView& message, void*)
+static void onSetLedColor(const mps::FrameView& message, void*)
 {
-  if(!mps::readPayloadAs(message, &led_payload_color)) return; // Copie dans led_payload_color le message s'il est conforme
+  if(!mps::readPayloadAs(message, &ledColor)) return; // Copie dans ledColor le message s'il est conforme
 
   // Mettre a jour l'etat de la led
-  if (led_payload_color.R == 0 && led_payload_color.G == 0 && led_payload_color.B == 0)
+  if (ledColor.red == 0 && ledColor.green == 0 && ledColor.blue == 0)
   {
-    led_payload_state.state = 0;
+    ledState.state = 0;
   }
   else
   {
-    led_payload_state.state = 1;
+    ledState.state = 1;
   }
   
-  rgbLedWrite(LED_PIN, led_payload_color.R, led_payload_color.G, led_payload_color.B); // Si la valeur est 0,0,0 la led est eteinte
+  rgbLedWrite(LED_PIN, ledColor.red, ledColor.green, ledColor.blue); // Si la valeur est 0,0,0 la led est eteinte
 
-  MPS.publishValue(kSubStatusLedColor, led_payload_color); // Publier le changement
-  MPS.publishValue(kSubStatusLedState, led_payload_state); // Publier le changement
+  MPS.publishValue(kSubStatusLedColor, ledColor); // Publier le changement
+  MPS.publishValue(kSubStatusLedState, ledState); // Publier le changement
 }
 
-static void onCmdLedStatus(const mps::FrameView& message, void*) {
-  if (!mps::readPayloadAs(message, &led_payload_state)) return;
+static void onCmdLedState(const mps::FrameView& message, void*) {
+  if (!mps::readPayloadAs(message, &ledState)) return;
 
-  led_payload_state.state = led_payload_state.state != 0;
+  ledState.state = ledState.state != 0;
 
-  if (led_payload_state.state) 
+  if (ledState.state)
   {
-    rgbLedWrite(LED_PIN, led_payload_color.R, led_payload_color.G, led_payload_color.B);
+    rgbLedWrite(LED_PIN, ledColor.red, ledColor.green, ledColor.blue);
   } else 
   {
     rgbLedWrite(LED_PIN, 0, 0, 0);
   }
 
-  MPS.publishValue(kSubStatusLedState, led_payload_state);
+  MPS.publishValue(kSubStatusLedState, ledState);
 }
 
 // ---- Fonctions appelées par setup/loop ----
 // envoi de heartbeats réguliers sans bloquer (comparaison au temps écoulé sans delay())
-void publishHeartbeat(){
+static void publishHeartbeat(){
   static uint32_t lastHeartbeatTimeMs = 0;
-  static const uint16_t kHbPeriod = 1000;
-  if(millis() - lastHeartbeatTimeMs >= kHbPeriod) 
+  static const uint16_t kHeartbeatPeriodMs = 1000;
+  if(millis() - lastHeartbeatTimeMs >= kHeartbeatPeriodMs)
   {
     lastHeartbeatTimeMs = millis();
     
@@ -145,7 +147,7 @@ void publishHeartbeat(){
 // ---- Fonctions Arduino ----
 // Exécutée une fois au démarrage
 void setup() {
-  Serial.begin(115200); // Démarrage de la communication série à 115200 bauds (sortie des Serial.print.. par exemple)
+  Serial.begin(SERIAL_BAUD_RATE); // Démarrage de la communication série à 115200 bauds (sortie des Serial.print.. par exemple)
 
   dht.begin();
 
@@ -159,12 +161,12 @@ void setup() {
   MPS.setSendFailedCallback(onSendFailed);
 
   MPS.on(kSubCmdReset, onCmdReset);
-  MPS.on(kSubCmdLedColor, onCmdLedColor); 
-  MPS.on(kSubCmdLedState, onCmdLedStatus);
+  MPS.on(kSubSetLedColor, onSetLedColor);
+  MPS.on(kSubCmdLedState, onCmdLedState);
 
   // constante d'adresse vide pour vérifier que l'adresse a été définie dans config.h
-  static const uint8_t kUnsetMacAddress[6] = {0, 0, 0, 0, 0, 0};
-  if(memcmp(kGatewayMacAddress, kUnsetMacAddress, 6) == 0) {
+  static const uint8_t kUnsetMacAddress[sizeof(kGatewayMacAddress)] = {0, 0, 0, 0, 0, 0};
+  if(memcmp(kGatewayMacAddress, kUnsetMacAddress, sizeof(kGatewayMacAddress)) == 0) {
     Serial.println("MPS: renseignez kGatewayMacAddress dans config.h (adresse affichee par l'IHM)");
     return;
   }
@@ -187,7 +189,7 @@ void loop() {
   publishHeartbeat();
 
   static uint32_t lastCounterTimeMs = 0;
-  if (millis() - lastCounterTimeMs >= 2000) {
+  if (millis() - lastCounterTimeMs >= COUNTER_PERIOD_MS) {
 
     // Compteur
     lastCounterTimeMs = millis();
@@ -195,16 +197,16 @@ void loop() {
     MPS.publishValue(kSubStatusCounter, counter);
 
     // Capteur
-    status_sensor.temperature = dht.readTemperature();
-    status_sensor.humidity = dht.readHumidity();
-    MPS.publishValue(kSubStatusSensor, status_sensor);
+    sensorStatus.temperatureDegrees = dht.readTemperature();
+    sensorStatus.humidityPercent = dht.readHumidity();
+    MPS.publishValue(kSubStatusSensor, sensorStatus);
   }
   
 
   // Envoyer seulement quand l'état du bouton change, spam moins la cible
-  if(status_button.value != (digitalRead(BUTTON_PIN) == LOW)) // verifie l'etat du bouton
+  if(buttonStatus.value != (digitalRead(BUTTON_PIN) == LOW)) // verifie l'etat du bouton
   {
-    status_button.value = digitalRead(BUTTON_PIN) == LOW; // Recupérer l'etat du bouton
-    MPS.publishValue(kSubStatusButton, status_button);
+    buttonStatus.value = digitalRead(BUTTON_PIN) == LOW; // Recupérer l'etat du bouton
+    MPS.publishValue(kSubStatusButton, buttonStatus);
   }  
 }
